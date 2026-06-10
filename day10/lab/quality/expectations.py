@@ -1,14 +1,9 @@
-"""
-Expectation suite đơn giản (không bắt buộc Great Expectations).
-
-Sinh viên có thể thay bằng GE / pydantic / custom — miễn là có halt có kiểm soát.
-"""
-
-from __future__ import annotations
-
+import datetime
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
+
+from pydantic import BaseModel, Field, field_validator
 
 
 @dataclass
@@ -19,6 +14,21 @@ class ExpectationResult:
     detail: str
 
 
+class CleanedChunkSchema(BaseModel):
+    chunk_id: str = Field(..., min_length=1)
+    doc_id: str = Field(..., min_length=1)
+    chunk_text: str = Field(..., min_length=1)
+    effective_date: str
+    exported_at: str
+
+    @field_validator('effective_date')
+    @classmethod
+    def check_date_iso(cls, v: str) -> str:
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", v.strip()):
+            raise ValueError("Must be in YYYY-MM-DD format")
+        return v
+
+
 def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[ExpectationResult], bool]:
     """
     Trả về (results, should_halt).
@@ -26,6 +36,23 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
     should_halt = True nếu có bất kỳ expectation severity halt nào fail.
     """
     results: List[ExpectationResult] = []
+
+    # E0: Pydantic Schema Validation (Distinction a & Bonus)
+    pydantic_errors = []
+    for idx, row in enumerate(cleaned_rows):
+        try:
+            CleanedChunkSchema(**row)
+        except Exception as e:
+            pydantic_errors.append((idx, str(e)))
+    ok0 = len(pydantic_errors) == 0
+    results.append(
+        ExpectationResult(
+            "pydantic_schema_validation",
+            ok0,
+            "halt",
+            f"schema_violations={len(pydantic_errors)}, first_error={pydantic_errors[0] if pydantic_errors else ''}",
+        )
+    )
 
     # E1: có ít nhất 1 dòng sau clean
     ok = len(cleaned_rows) >= 1
@@ -109,6 +136,35 @@ def run_expectations(cleaned_rows: List[Dict[str, Any]]) -> Tuple[List[Expectati
             ok6,
             "halt",
             f"violations={len(bad_hr_annual)}",
+        )
+    )
+
+    # E7: Ngày hiệu lực không ở tương lai (New Expectation 1)
+    today_str = datetime.date.today().isoformat()
+    future_dates = [
+        r
+        for r in cleaned_rows
+        if (r.get("effective_date") or "") > today_str
+    ]
+    ok7 = len(future_dates) == 0
+    results.append(
+        ExpectationResult(
+            "no_future_effective_date",
+            ok7,
+            "warn",
+            f"future_date_count={len(future_dates)}",
+        )
+    )
+
+    # E8: Phải có ít nhất 4 loại tài liệu nguồn unique được nạp (New Expectation 2)
+    unique_docs = {r.get("doc_id") for r in cleaned_rows if r.get("doc_id")}
+    ok8 = len(unique_docs) >= 4
+    results.append(
+        ExpectationResult(
+            "min_four_unique_doc_types",
+            ok8,
+            "halt",
+            f"unique_docs_found={len(unique_docs)} ({sorted(unique_docs)})",
         )
     )
 

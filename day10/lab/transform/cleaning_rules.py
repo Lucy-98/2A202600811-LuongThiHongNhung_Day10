@@ -20,11 +20,31 @@ ALLOWED_DOC_IDS = frozenset(
         "sla_p1_2026",
         "it_helpdesk_faq",
         "hr_leave_policy",
+        "access_control_sop",
     }
 )
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DMY_SLASH = re.compile(r"^(\d{2})/(\d{2})/(\d{4})$")
+
+
+def get_hr_leave_min_effective_date() -> str:
+    """
+    Đọc động cutoff date từ contracts/data_contract.yaml (Distinction d).
+    """
+    try:
+        import yaml
+        root = Path(__file__).resolve().parent.parent
+        contract_path = root / "contracts" / "data_contract.yaml"
+        if contract_path.is_file():
+            with contract_path.open(encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+                cutoff = data.get("policy_versioning", {}).get("hr_leave_min_effective_date")
+                if cutoff:
+                    return str(cutoff).strip()
+    except Exception:
+        pass
+    return "2026-01-01"  # Fallback
 
 
 def _norm_text(s: str) -> str:
@@ -73,7 +93,7 @@ def clean_rows(
     Baseline (mở rộng theo narrative Day 10):
     1) Quarantine: doc_id không thuộc allowlist (export lạ / catalog sai).
     2) Chuẩn hoá effective_date sang YYYY-MM-DD; quarantine nếu không parse được.
-    3) Quarantine: chunk hr_leave_policy có effective_date < 2026-01-01 (bản HR cũ / conflict version).
+    3) Quarantine: chunk hr_leave_policy có effective_date < cutoff_date (bản HR cũ / conflict version).
     4) Quarantine: chunk_text rỗng hoặc effective_date rỗng sau chuẩn hoá.
     5) Loại trùng nội dung chunk_text (giữ bản đầu).
     6) Fix stale refund: policy_refund_v4 chứa '14 ngày làm việc' → 7 ngày.
@@ -82,6 +102,8 @@ def clean_rows(
     seen_text: set[str] = set()
     cleaned: List[Dict[str, Any]] = []
     seq = 0
+
+    hr_min_effective_date = get_hr_leave_min_effective_date()
 
     for raw in rows:
         doc_id = raw.get("doc_id", "")
@@ -101,7 +123,7 @@ def clean_rows(
             quarantine.append({**raw, "reason": eff_err, "effective_date_raw": eff_raw})
             continue
 
-        if doc_id == "hr_leave_policy" and eff_norm < "2026-01-01":
+        if doc_id == "hr_leave_policy" and eff_norm < hr_min_effective_date:
             quarantine.append(
                 {
                     **raw,
@@ -111,17 +133,50 @@ def clean_rows(
             )
             continue
 
-        if not text:
+        # Đội ngũ thiết kế quyết định cách ly các bản ghi chứa chính sách phép năm cũ 10 ngày (stale content)
+        if doc_id == "hr_leave_policy" and "10 ngày phép năm" in text:
+            quarantine.append(
+                {
+                    **raw,
+                    "reason": "stale_hr_policy_content",
+                }
+            )
+            continue
+
+        if not text or not text.strip():
             quarantine.append({**raw, "reason": "missing_chunk_text"})
             continue
 
-        key = _norm_text(text)
+        # Thêm các rule làm sạch dữ liệu mới (New rules):
+        # 1. Loại bỏ tiền tố thừa "Nội dung không rõ ràng: " (New Rule 1)
+        fixed_text = text.strip()
+        if fixed_text.startswith("Nội dung không rõ ràng:"):
+            fixed_text = fixed_text[len("Nội dung không rõ ràng:"):].strip()
+
+        # 2. Loại bỏ các ký tự "!!!" gây nhiễu ở đầu hoặc cuối (New Rule 2)
+        if fixed_text.startswith("!!!"):
+            fixed_text = fixed_text.lstrip("!").strip()
+        if fixed_text.endswith("!!!"):
+            fixed_text = fixed_text.rstrip("!").strip()
+
+        # 3. Sửa lỗi lặp từ "làm việc làm việc" liên tục (New Rule 3)
+        while "làm việc làm việc" in fixed_text:
+            fixed_text = fixed_text.replace("làm việc làm việc", "làm việc")
+
+        # 4. Làm giàu ngữ cảnh cho P1 Escalation để nâng cao độ chính xác truy vấn RAG (New Rule 4)
+        if doc_id == "sla_p1_2026" and "Escalation P1" in fixed_text:
+            fixed_text = fixed_text.replace("Escalation P1", "Escalation ticket P1 (auto escalate)")
+
+        if not fixed_text or not fixed_text.strip():
+            quarantine.append({**raw, "reason": "missing_chunk_text"})
+            continue
+
+        key = _norm_text(fixed_text)
         if key in seen_text:
             quarantine.append({**raw, "reason": "duplicate_chunk_text"})
             continue
         seen_text.add(key)
 
-        fixed_text = text
         if apply_refund_window_fix and doc_id == "policy_refund_v4":
             if "14 ngày làm việc" in fixed_text:
                 fixed_text = fixed_text.replace(

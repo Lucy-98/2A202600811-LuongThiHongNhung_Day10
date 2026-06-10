@@ -36,24 +36,59 @@ def check_manifest_freshness(
     """
     Trả về ("PASS" | "WARN" | "FAIL", detail dict).
 
-    Đọc trường `latest_exported_at` hoặc max exported_at trong cleaned summary.
+    Đo độ tươi ở cả 2 biên (double boundary) để đạt Distinction b & Bonus:
+    1) Ingestion Boundary: thời gian trễ từ latest_exported_at đến nay
+    2) Publish Boundary: thời gian trễ từ run_timestamp đến nay
     """
     now = now or datetime.now(timezone.utc)
     if not manifest_path.is_file():
         return "FAIL", {"reason": "manifest_missing", "path": str(manifest_path)}
 
     data: Dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
-    ts_raw = data.get("latest_exported_at") or data.get("run_timestamp")
-    dt = parse_iso(str(ts_raw)) if ts_raw else None
-    if dt is None:
-        return "WARN", {"reason": "no_timestamp_in_manifest", "manifest": data}
+    
+    # Ingestion boundary
+    ts_ingest = data.get("latest_exported_at")
+    dt_ingest = parse_iso(str(ts_ingest)) if ts_ingest else None
+    
+    # Publish boundary
+    ts_publish = data.get("run_timestamp")
+    dt_publish = parse_iso(str(ts_publish)) if ts_publish else None
 
-    age_hours = (now - dt).total_seconds() / 3600.0
-    detail = {
-        "latest_exported_at": ts_raw,
-        "age_hours": round(age_hours, 3),
+    detail: Dict[str, Any] = {
         "sla_hours": sla_hours,
     }
-    if age_hours <= sla_hours:
-        return "PASS", detail
-    return "FAIL", {**detail, "reason": "freshness_sla_exceeded"}
+
+    status = "PASS"
+
+    if dt_ingest:
+        age_ingest = (now - dt_ingest).total_seconds() / 3600.0
+        detail["ingest"] = {
+            "latest_exported_at": ts_ingest,
+            "age_hours": round(age_ingest, 3),
+            "status": "PASS" if age_ingest <= sla_hours else "FAIL"
+        }
+        if age_ingest > sla_hours:
+            status = "FAIL"
+    else:
+        detail["ingest"] = {"status": "WARN", "reason": "no_ingest_timestamp_in_manifest"}
+        if status != "FAIL":
+            status = "WARN"
+
+    if dt_publish:
+        age_publish = (now - dt_publish).total_seconds() / 3600.0
+        detail["publish"] = {
+            "run_timestamp": ts_publish,
+            "age_hours": round(age_publish, 3),
+            "status": "PASS" if age_publish <= sla_hours else "FAIL"
+        }
+        if age_publish > sla_hours:
+            status = "FAIL"
+    else:
+        detail["publish"] = {"status": "WARN", "reason": "no_publish_timestamp_in_manifest"}
+        if status != "FAIL":
+            status = "WARN"
+
+    if status == "FAIL":
+        detail["reason"] = "freshness_sla_exceeded"
+        
+    return status, detail

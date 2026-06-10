@@ -1,0 +1,22 @@
+question_id,question,top1_doc_id,top1_preview,contains_expected,hits_forbidden,top1_doc_expected,top_k_used
+q_refund_window,Khách hàng có bao nhiêu ngày để yêu cầu hoàn tiền kể từ khi đơn được xác nhận?,policy_refund_v4,Yêu cầu hoàn tiền được chấp nhận trong vòng 14 ngày làm việc kể từ xác nhận đơn.,yes,yes,yes,3
+q_refund_exception_digital,Sản phẩm nào không được hoàn tiền theo chính sách refund nội bộ?,policy_refund_v4,Email liên hệ nội bộ cho chính sách hoàn tiền: cs-refund@company.internal. Hotline nội bộ: ext. 1234.,yes,no,yes,3
+q_refund_process_confirm,"Sau khi khách gửi yêu cầu hoàn tiền, CS Agent cần xác nhận trong vòng bao lâu?",policy_refund_v4,CS Agent xem xét yêu cầu hoàn tiền trong vòng 1 ngày làm việc và xác nhận đủ điều kiện.,yes,no,yes,3
+q_refund_finance_timeline,Finance Team xử lý yêu cầu hoàn tiền trong bao lâu?,policy_refund_v4,Finance Team xử lý hoàn tiền trong 3-5 ngày làm việc và thông báo kết quả cho khách hàng.,yes,no,yes,3
+q_refund_contact,Email liên hệ nội bộ cho chính sách hoàn tiền là gì?,policy_refund_v4,Email liên hệ nội bộ cho chính sách hoàn tiền: cs-refund@company.internal. Hotline nội bộ: ext. 1234.,yes,no,yes,3
+q_p1_first_response,SLA phản hồi đầu tiên cho ticket P1 được cam kết là trong bao lâu?,sla_p1_2026,Ticket P1 có SLA phản hồi ban đầu 15 phút và resolution trong 4 giờ.,yes,no,yes,3
+q_p1_resolution,SLA resolution cho ticket P1 trong chính sách là bao nhiêu giờ?,sla_p1_2026,Ticket P1 có SLA phản hồi ban đầu 15 phút và resolution trong 4 giờ.,yes,no,yes,3
+q_p1_escalation,"Nếu không có phản hồi với ticket P1 sau bao lâu, hệ thống tự động escalate?",sla_p1_2026,Ticket P2: phản hồi ban đầu 2 giờ và resolution 1 ngày làm việc. Escalation sau 90 phút không phản hồi.,no,no,yes,3
+q_p1_update_frequency,"Trong sự cố P1, thông tin tiến độ cần được cập nhật mỗi bao lâu?",it_helpdesk_faq,Laptop mới được cấp trong ngày onboarding đầu tiên. Liên hệ HR hoặc IT Admin nếu có vấn đề.,yes,no,no,3
+q_p1_alert_channel,Kênh Slack nào được dùng để thông báo sự cố P1?,sla_p1_2026,Kênh thông báo sự cố P1: Slack #incident-p1 và email incident@company.internal. PagerDuty tự động nhắn on-call.,yes,no,yes,3
+q_lockout,Tài khoản sẽ bị khóa sau bao nhiêu lần đăng nhập sai liên tiếp?,it_helpdesk_faq,Tài khoản bị khóa sau 5 lần đăng nhập sai liên tiếp.,yes,no,yes,3
+q_password_rotation,Mật khẩu cần được thay đổi định kỳ sau bao lâu?,it_helpdesk_faq,Mật khẩu phải được thay đổi mỗi 90 ngày. Hệ thống nhắc nhở 7 ngày trước khi hết hạn.,yes,no,yes,3
+q_password_reset_time,"Sau khi quên mật khẩu, bạn sẽ nhận mật khẩu mới qua email trong bao lâu?",it_helpdesk_faq,Quên mật khẩu: truy cập SSO portal hoặc liên hệ Helpdesk ext. 9000. Mật khẩu mới gửi qua email trong vòng 5 phút.,yes,no,yes,3
+q_vpn_client_limit,VPN được phép kết nối tối đa bao nhiêu thiết bị cùng lúc?,it_helpdesk_faq,VPN: mỗi tài khoản được kết nối tối đa 2 thiết bị cùng lúc. Phần mềm sử dụng: Cisco AnyConnect.,yes,no,yes,3
+q_email_quota,Dung lượng hộp thư tiêu chuẩn là bao nhiêu GB?,it_helpdesk_faq,Dung lượng hộp thư tiêu chuẩn là 50GB. Nếu đầy có thể xóa email cũ hoặc yêu cầu tăng dung lượng qua ticket IT-ACCESS.,yes,no,yes,3
+q_hr_annual_leave_under3,Nhân viên dưới 3 năm kinh nghiệm được bao nhiêu ngày phép năm?,hr_leave_policy,Nhân viên dưới 3 năm kinh nghiệm được 12 ngày phép năm theo chính sách 2026.,yes,no,yes,3
+q_hr_annual_leave_3_5,Nhân viên có kinh nghiệm từ 3 đến 5 năm được bao nhiêu ngày phép năm?,hr_leave_policy,Nhân viên từ 3 đến 5 năm kinh nghiệm được 15 ngày phép năm theo chính sách 2026.,yes,no,yes,3
+q_hr_annual_leave_over5,Nhân viên trên 5 năm kinh nghiệm được bao nhiêu ngày phép năm?,hr_leave_policy,Nhân viên trên 5 năm kinh nghiệm được 18 ngày phép năm theo chính sách 2026.,yes,no,yes,3
+q_hr_sick_leave,Số ngày nghỉ ốm có trả lương là bao nhiêu?,hr_leave_policy,Nghỉ ốm: 10 ngày/năm có trả lương. Cần giấy tờ y tế nếu nghỉ trên 3 ngày liên tiếp.,yes,no,yes,3
+q_access_level4,Level 4 Admin Access yêu cầu phê duyệt bởi ai?,access_control_sop,Level 4 Admin Access yêu cầu phê duyệt bởi IT Manager và CISO. Thời gian xử lý: 5 ngày làm việc. Yêu cầu thêm: training bắt buộc về security policy.,yes,no,yes,3
+q_access_level2_turnaround,Thời gian xử lý cấp quyền Standard Access là bao lâu?,access_control_sop,Quyền Standard Access (Level 2) được xử lý trong 2 ngày làm việc sau khi Line Manager và IT Admin phê duyệt.,yes,no,yes,3
